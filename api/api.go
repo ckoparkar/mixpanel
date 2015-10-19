@@ -1,3 +1,4 @@
+// Package api implements the Mixpanel API
 package api
 
 import (
@@ -16,8 +17,9 @@ import (
 	"time"
 )
 
+// Config is used to configure the creation of a client
 type Config struct {
-	// Scheme is the URI scheme for the Consul server.
+	// Scheme is the URI scheme for the Mixpanel server.
 	Scheme string
 
 	// Address is URI of mixpanel server.
@@ -33,6 +35,7 @@ type Config struct {
 	HttpClient *http.Client
 }
 
+// DefaultConfig returns a default configuration for the client
 func DefaultConfig() (*Config, error) {
 	// Error out if API credentials not found
 	key := os.Getenv("MIXPANEL_API_KEY")
@@ -50,7 +53,7 @@ func DefaultConfig() (*Config, error) {
 	}, nil
 }
 
-// Describe the various query options required for different requests
+// QueryOptions describe the various options required for different requests
 // the `json` struct tag value, decides name used in HTTP request
 type QueryOptions struct {
 	// Key is the API key for mixpanel access.
@@ -63,17 +66,17 @@ type QueryOptions struct {
 	// used to expire an API request.
 	Expire string `json:"expire"`
 
-	// Signature for the method call, more documentation here
+	// Sig is the auth signature for the method call, more documentation here
 	// https://mixpanel.com/docs/api-documentation/data-export-api#auth-implementation .
 	Sig string `json:"sig"`
 
-	// FromDate sets the start date for export API.
+	// FromDate sets the start date for export API. json/csv
 	FromDate string `json:"from_date"`
 
 	// ToDate sets the start date for export API.
 	ToDate string `json:"to_date"`
 
-	// Format describes the response format.
+	// Format describes the response format. json/csv
 	Format string `json:"format"`
 
 	// Event only exports data for this event.
@@ -123,17 +126,19 @@ func (q *QueryOptions) toMap() ([]string, map[string]string) {
 	return keys, params
 }
 
+// Client provides a client to the Mixpanel API
 type Client struct {
 	config Config
 }
 
+// NewClient returns a new client
 func NewClient(config Config) *Client {
 	return &Client{
 		config: config,
 	}
 }
 
-// mixpanel export API, prints data to STDOUT.
+// Export implements the mixpanel export API, prints data to STDOUT.
 func (c *Client) Export(q *QueryOptions) {
 	r := c.newRequest("GET", "/export/")
 	r.setQueryOptions(q)
