@@ -3,7 +3,6 @@ package command
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"strings"
 
@@ -45,13 +44,12 @@ func (c *ExportCommand) Run(args []string) int {
 	}
 	client := api.NewClient(*config)
 	data, err := client.Export(queryOptions)
+	if err != nil {
+		log.Printf("[ERR] %s", err)
+		return 1
+	}
 	if c.out != "" {
-		err := ioutil.WriteFile(c.out, data, 0644)
-		if err != nil {
-			// if we couldnt open file, write to STDOUT
-			log.Printf("[ERR] %s, writing to STDOUT.\n")
-			fmt.Println(string(data))
-		}
+		api.OverwriteFile(c.out, data)
 	} else {
 		fmt.Println(string(data))
 	}
