@@ -2,6 +2,8 @@ package command
 
 import (
 	"flag"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"strings"
 
@@ -12,12 +14,13 @@ import (
 type ExportCommand struct {
 	Ui   cli.Ui
 	args []string
+	out  string
 }
 
 func (c *ExportCommand) Help() string {
 	helpText := `Usage: mixpanel export [options]
 
-  Exports mixpanel data.
+  Exports raw dump of mixpanel data for a set of events over a time period.
 
 Options:
 
@@ -25,6 +28,7 @@ Options:
   -to=yesterday   End date to extract events.
   -format=json    Choose export format between json/csv.
   -event=E        Extract data for only event E.
+  -out=STDOUT     Decides where to write the data.
 `
 	return strings.TrimSpace(helpText)
 }
@@ -40,7 +44,17 @@ func (c *ExportCommand) Run(args []string) int {
 		return 1
 	}
 	client := api.NewClient(*config)
-	client.Export(queryOptions)
+	data, err := client.Export(queryOptions)
+	if c.out != "" {
+		err := ioutil.WriteFile(c.out, data, 0644)
+		if err != nil {
+			// if we couldnt open file, write to STDOUT
+			log.Printf("[ERR] %s, writing to STDOUT.\n")
+			fmt.Println(string(data))
+		}
+	} else {
+		fmt.Println(string(data))
+	}
 	return 0
 }
 
@@ -55,12 +69,17 @@ func (c *ExportCommand) readQueryOptions(config *api.Config) (*api.QueryOptions,
 	cmdFlags.Usage = func() { c.Ui.Output(c.Help()) }
 
 	var cmdQueryOptions api.QueryOptions
+	var out string
 	cmdFlags.StringVar(&cmdQueryOptions.FromDate, "from", "", "from date")
 	cmdFlags.StringVar(&cmdQueryOptions.ToDate, "to", "", "to date")
 	cmdFlags.StringVar(&cmdQueryOptions.Format, "format", "", "data format")
 	cmdFlags.StringVar(&cmdQueryOptions.Event, "event", "", "event name")
+	cmdFlags.StringVar(&out, "out", "", "output destination")
 	if err := cmdFlags.Parse(c.args); err != nil {
 		return nil, err
+	}
+	if out != "" {
+		c.out = out
 	}
 
 	queryOptions := api.DefaultQueryOptions(config)

@@ -1,3 +1,4 @@
+// Package command provides cmd-line utilities around the API.
 package command
 
 import (

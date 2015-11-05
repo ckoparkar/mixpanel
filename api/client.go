@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -22,19 +21,19 @@ func NewClient(config Config) *Client {
 }
 
 // Export implements the mixpanel export API, prints data to STDOUT.
-func (c *Client) Export(q *QueryOptions) {
+func (c *Client) Export(q *QueryOptions) ([]byte, error) {
 	r := c.newRequest("GET", "/export/")
 	r.setQueryOptions(q)
 
 	_, resp, err := c.doRequest(r)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	fmt.Println(string(b))
+	return b, nil
 }
 
 // newRequest is used to create a new request
