@@ -39,19 +39,30 @@ type QueryOptions struct {
 
 	// Event only exports data for this event.
 	Event string `json:"event"`
+
+	// SessionID used to maintain session in engage API
+	SessionID string `json:"session_id"`
+
+	// Page is page number to get results
+	Page string `json:"page"`
+}
+
+func DefaultExportQueryOptions(config *Config) *QueryOptions {
+	// expire api request 10 minutes from now
+	yesterday := time.Now().Add(-24 * time.Hour).Format("2006-01-02")
+	q := DefaultQueryOptions(config)
+	q.FromDate = yesterday
+	q.ToDate = yesterday
+	return q
 }
 
 func DefaultQueryOptions(config *Config) *QueryOptions {
-	// expire api request 10 minutes from now
 	expire := time.Now().Add(10 * time.Minute).Unix()
-	yesterday := time.Now().Add(-24 * time.Hour).Format("2006-01-02")
 	return &QueryOptions{
-		Key:      config.Key,
-		Secret:   config.Secret,
-		Expire:   strconv.Itoa(int(expire)),
-		Format:   "json",
-		FromDate: yesterday,
-		ToDate:   yesterday,
+		Key:    config.Key,
+		Secret: config.Secret,
+		Expire: strconv.Itoa(int(expire)),
+		Format: "json",
 	}
 }
 

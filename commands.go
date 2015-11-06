@@ -24,5 +24,10 @@ func init() {
 				Ui: ui,
 			}, nil
 		},
+		"engage": func() (cli.Command, error) {
+			return &command.EngageCommand{
+				Ui: ui,
+			}, nil
+		},
 	}
 }

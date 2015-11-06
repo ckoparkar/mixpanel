@@ -80,7 +80,7 @@ func (c *ExportCommand) readQueryOptions(config *api.Config) (*api.QueryOptions,
 		c.out = out
 	}
 
-	queryOptions := api.DefaultQueryOptions(config)
+	queryOptions := api.DefaultExportQueryOptions(config)
 	// Not all config would be provided as cmd-line args
 	queryOptions = api.MergeQueryOptions(queryOptions, &cmdQueryOptions)
 	return queryOptions, nil

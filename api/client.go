@@ -36,6 +36,23 @@ func (c *Client) Export(q *QueryOptions) ([]byte, error) {
 	return b, nil
 }
 
+func (c *Client) Engage(q *QueryOptions) error {
+	c.config.Address = "mixpanel.com"
+	r := c.newRequest("GET", "/engage")
+	r.setQueryOptions(q)
+
+	_, resp, err := c.doRequest(r)
+	if err != nil {
+		return err
+	}
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(b))
+	return nil
+}
+
 // newRequest is used to create a new request
 func (c *Client) newRequest(method, path string) *request {
 	r := &request{
