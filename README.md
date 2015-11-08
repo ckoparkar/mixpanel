@@ -15,6 +15,7 @@ Options:
   -to=yesterday   End date to extract events.
   -format=json    Choose export format between json/csv.
   -event=E        Extract data for only event E.
+  -out=STDOUT     Decides where to write the data.
 ```
 
 ## Documentation
