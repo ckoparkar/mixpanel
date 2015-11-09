@@ -1,10 +1,13 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -20,7 +23,7 @@ func NewClient(config Config) *Client {
 	}
 }
 
-// Export implements the mixpanel export API, prints data to STDOUT.
+// Export implements the mixpanel export API
 func (c *Client) Export(q *QueryOptions) ([]byte, error) {
 	r := c.newRequest("GET", "/export/")
 	r.setQueryOptions(q)
@@ -36,21 +39,37 @@ func (c *Client) Export(q *QueryOptions) ([]byte, error) {
 	return b, nil
 }
 
-func (c *Client) Engage(q *QueryOptions) error {
+// Engage implements mixpanel engage API
+func (c *Client) Engage(q *QueryOptions) ([]map[string]interface{}, error) {
 	c.config.Address = "mixpanel.com"
-	r := c.newRequest("GET", "/engage")
-	r.setQueryOptions(q)
-
-	_, resp, err := c.doRequest(r)
-	if err != nil {
-		return err
+	var engage EngageResponse
+	results := make([]map[string]interface{}, 0)
+	for len(engage.Results) >= engage.PageSize {
+		// TODO(cskksc): it should work with q
+		q2 := DefaultQueryOptions(&c.config)
+		r := c.newRequest("GET", "/engage")
+		if engage.SessionID != "" {
+			q2.SessionID = engage.SessionID
+		}
+		if engage.Page != 0 {
+			q2.Page = strconv.Itoa(engage.Page + 1)
+		}
+		r.setQueryOptions(q2)
+		_, resp, err := c.doRequest(r)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		json.Unmarshal(b, &engage)
+		fmt.Println(engage.SessionID)
+		results = append(results, engage.Results...)
 	}
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(b))
-	return nil
+	return results, nil
 }
 
 // newRequest is used to create a new request

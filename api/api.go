@@ -5,7 +5,7 @@ type EngageResponse struct {
 	PageSize  int    `json:"page"`
 	SessionID string `json:"session_id"`
 	Status    string `json:"status"`
-	Total     int    `json:"string"`
+	Total     int    `json:"total"`
 
-	Results map[string]interface{} `json:"results"`
+	Results []map[string]interface{} `json:"results"`
 }

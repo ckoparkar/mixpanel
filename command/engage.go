@@ -1,8 +1,11 @@
 package command
 
 import (
+	"encoding/json"
 	"flag"
+	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/cskksc/mixpanel/api"
@@ -12,6 +15,7 @@ import (
 type EngageCommand struct {
 	Ui   cli.Ui
 	args []string
+	out  string
 }
 
 func (c *EngageCommand) Help() string {
@@ -22,6 +26,7 @@ func (c *EngageCommand) Help() string {
 Options:
 
   -from=yesterday Start date to extract events.
+  -out=STDOUT     Decides where to write the data.
 `
 	return strings.TrimSpace(helpText)
 }
@@ -37,7 +42,22 @@ func (c *EngageCommand) Run(args []string) int {
 		return 1
 	}
 	client := api.NewClient(*config)
-	client.Engage(queryOptions)
+	results, _ := client.Engage(queryOptions)
+	enc := json.NewEncoder(os.Stdout)
+	var f *os.File
+	if c.out != "" {
+		f, err = os.OpenFile(c.out, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0660)
+		if err != nil {
+			f, _ = ioutil.TempFile(".", "")
+			log.Printf("[ERR] Couldnt open file. Encoding to %s.", err, f.Name())
+		}
+		defer f.Close()
+		enc = json.NewEncoder(f)
+	}
+	for _, r := range results {
+		enc.Encode(r)
+	}
+
 	return 0
 }
 
@@ -52,9 +72,13 @@ func (c *EngageCommand) readQueryOptions(config *api.Config) (*api.QueryOptions,
 	cmdFlags.Usage = func() { c.Ui.Output(c.Help()) }
 
 	var cmdQueryOptions api.QueryOptions
-	//cmdFlags.StringVar(&cmdQueryOptions.FromDate, "from", "", "from date")
+	var out string
+	cmdFlags.StringVar(&out, "out", "", "output destination")
 	if err := cmdFlags.Parse(c.args); err != nil {
 		return nil, err
+	}
+	if out != "" {
+		c.out = out
 	}
 
 	queryOptions := api.DefaultQueryOptions(config)
