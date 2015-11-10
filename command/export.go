@@ -2,8 +2,10 @@ package command
 
 import (
 	"flag"
-	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/cskksc/mixpanel/api"
@@ -43,15 +45,21 @@ func (c *ExportCommand) Run(args []string) int {
 		return 1
 	}
 	client := api.NewClient(*config)
-	data, err := client.Export(queryOptions)
-	if err != nil {
+	var w io.Writer
+	if c.out != "" {
+		f, err := os.OpenFile(c.out, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0660)
+		if err != nil {
+			f, _ = ioutil.TempFile(".", "")
+			log.Printf("[ERR] Couldnt open file. Encoding to %s.", err, f.Name())
+		}
+		defer f.Close()
+		w = f
+	} else {
+		w = os.Stdout
+	}
+	if err := client.Export(queryOptions, w); err != nil {
 		log.Printf("[ERR] %s", err)
 		return 1
-	}
-	if c.out != "" {
-		api.OverwriteFile(c.out, data)
-	} else {
-		fmt.Println(string(data))
 	}
 	return 0
 }

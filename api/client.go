@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -24,26 +25,29 @@ func NewClient(config Config) *Client {
 }
 
 // Export implements the mixpanel export API
-func (c *Client) Export(q *QueryOptions) ([]byte, error) {
+func (c *Client) Export(q *QueryOptions, out io.Writer) error {
 	r := c.newRequest("GET", "/export/")
 	r.setQueryOptions(q)
 
 	_, resp, err := c.doRequest(r)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return b, nil
+	if _, err := out.Write(b); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Engage implements mixpanel engage API
-func (c *Client) Engage(q *QueryOptions) ([]map[string]interface{}, error) {
+func (c *Client) Engage(q *QueryOptions, out io.Writer) error {
 	c.config.Address = "mixpanel.com"
 	var engage EngageResponse
-	results := make([]map[string]interface{}, 0)
+	enc := json.NewEncoder(out)
 	for len(engage.Results) >= engage.PageSize {
 		// TODO(cskksc): it should work with q
 		q2 := DefaultQueryOptions(&c.config)
@@ -66,10 +70,11 @@ func (c *Client) Engage(q *QueryOptions) ([]map[string]interface{}, error) {
 			continue
 		}
 		json.Unmarshal(b, &engage)
-		fmt.Println(engage.SessionID)
-		results = append(results, engage.Results...)
+		for _, result := range engage.Results {
+			enc.Encode(result)
+		}
 	}
-	return results, nil
+	return nil
 }
 
 // newRequest is used to create a new request

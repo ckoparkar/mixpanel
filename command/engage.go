@@ -1,8 +1,8 @@
 package command
 
 import (
-	"encoding/json"
 	"flag"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -42,22 +42,22 @@ func (c *EngageCommand) Run(args []string) int {
 		return 1
 	}
 	client := api.NewClient(*config)
-	results, _ := client.Engage(queryOptions)
-	enc := json.NewEncoder(os.Stdout)
-	var f *os.File
+	var w io.Writer
 	if c.out != "" {
-		f, err = os.OpenFile(c.out, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0660)
+		f, err := os.OpenFile(c.out, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0660)
 		if err != nil {
 			f, _ = ioutil.TempFile(".", "")
 			log.Printf("[ERR] Couldnt open file. Encoding to %s.", err, f.Name())
 		}
 		defer f.Close()
-		enc = json.NewEncoder(f)
-	}
-	for _, r := range results {
-		enc.Encode(r)
+		w = f
+	} else {
+		w = os.Stdout
 	}
 
+	if err := client.Engage(queryOptions, w); err != nil {
+		return 1
+	}
 	return 0
 }
 
